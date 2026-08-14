@@ -1,0 +1,9 @@
+{
+  "model_size": "medium",
+  "language": "zh",
+  "initial_prompt": "以下是歌曲的歌词。",
+  "no_speech_threshold": 0.75,
+  "provider": "local",
+  "api_key": "",
+  "hotword_boost": true
+}

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>歌词时间戳</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;background:#f2f2f3;color:#18181b;font-size:14px;line-height:1.6;height:100vh;overflow:hidden;display:flex;justify-content:center;padding:24px 16px}
+button,input,textarea,select{font-family:inherit}
+[hidden]{display:none!important}
+.shell{width:100%;max-width:720px;background:#fff;border:1px solid #ececec;border-radius:18px;box-shadow:0 10px 40px rgba(24,24,27,.06);display:flex;flex-direction:column;overflow:hidden}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid #ececec}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:38px;height:38px;border-radius:11px;display:flex;align-items:center;justify-content:center;flex:none}
+.logo img{width:32px;height:32px;display:block}
+.title{font-size:16px;font-weight:600;letter-spacing:.02em}
+.subtitle{font-size:12px;color:#71717a;margin-top:1px}
+.topright{display:flex;align-items:center;gap:12px}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:#71717a;padding:6px 12px;border:1px solid #ececec;border-radius:999px;background:#fafafa;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:#a1a1aa}
+body[data-status="busy"] .dot{background:#d97706;animation:pulse 1.2s ease-in-out infinite}
+body[data-status="ok"] .dot{background:#16a34a}
+body[data-status="err"] .dot{background:#ef4444}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.75)}}
+.iconbtn{width:34px;height:34px;border:1px solid #ececec;border-radius:10px;background:#fff;color:#71717a;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.iconbtn:hover{background:#fafafa}
+.iconbtn svg{width:16px;height:16px}
+.main{flex:1;overflow-y:auto;padding:26px 32px 30px;min-height:0;display:flex;flex-direction:column}
+.drop{border:1.5px dashed #d4d4d8;border-radius:16px;padding:34px 20px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;background:#fafafa}
+.drop:hover,.drop.over{border-color:#18181b;background:#f4f4f5}
+.drop-icon{font-size:30px;margin-bottom:10px}
+.drop-title{font-size:15px;color:#3f3f46;font-weight:500}
+.drop-hint{font-size:12px;color:#a1a1aa;margin-top:4px}
+#step-input{flex:none}
+#step-result{flex:1;min-height:0;display:flex;flex-direction:column}
+#step-result .player-wrap{margin-top:0}
+.playbar{display:flex;gap:10px;justify-content:center;margin-top:12px;flex:none}
+.pbtn{min-width:96px;justify-content:center}
+.player-wrap{margin-top:14px;flex:none}
+.player-wrap audio{width:100%;height:40px}
+.meta-row{display:flex;gap:10px;margin:0 0 16px}
+.meta-row .input{flex:1}
+.input{width:100%;border:1px solid #e4e4e7;border-radius:11px;padding:9px 13px;font-size:14px;color:#18181b;background:#fff;outline:none;transition:border-color .15s}
+.input:focus{border-color:#a1a1aa}
+.textarea{width:100%;min-height:220px;margin-top:14px;border:1px solid #e4e4e7;border-radius:14px;padding:13px 15px;font-size:14px;line-height:2;color:#18181b;background:#fff;resize:vertical;outline:none;transition:border-color .15s}
+.textarea:focus{border-color:#a1a1aa}
+.align-row{display:flex;align-items:center;gap:14px;margin-top:16px}
+.hint{font-size:12px;color:#a1a1aa}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:11px;padding:10px 18px;font-size:14px;cursor:pointer;border:1px solid transparent;transition:background .15s,opacity .15s}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:#18181b;color:#fff}
+.btn-primary:hover:not(:disabled){background:#3f3f46}
+.btn-ghost{background:#fff;border-color:#ececec;color:#52525b}
+.btn-ghost:hover:not(:disabled){background:#fafafa}
+.result-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:16px 0 4px;flex-wrap:wrap;flex:none}
+.progress{font-size:13px;font-weight:600;color:#3f3f46}
+.result-hint{font-size:12px;color:#a1a1aa}
+.lines-wrap{flex:1;min-height:0;overflow-y:auto;margin:12px -32px 0;padding:0 32px 4px}
+.lines{margin-top:0;border:1px solid #ececec;border-radius:14px;overflow:hidden}
+.line{display:flex;align-items:center;gap:12px;padding:9px 14px;border-bottom:1px solid #f4f4f5;cursor:pointer;transition:background .12s}
+.line:last-child{border-bottom:none}
+.line:hover{background:#fafafa}
+.line.sel{background:#f4f4f5}
+.line.playing{background:#eef4ff;box-shadow:inset 3px 0 0 #2563eb}
+.line.playing:hover{background:#eef4ff}
+.line.playing .text{font-weight:600;color:#1e3a8a}
+.line.none{opacity:.55}
+.line .time{width:78px;flex:none;border:1px solid transparent;border-radius:8px;padding:5px 8px;font-size:13px;font-variant-numeric:tabular-nums;color:#52525b;background:transparent;outline:none;text-align:right}
+.line:hover .time,.line .time:focus{border-color:#e4e4e7;background:#fff}
+.line .text{flex:1;font-size:14px;color:#27272a;word-break:break-word}
+.chip{flex:none;font-size:11px;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:#dcfce7;color:#16a34a}
+.chip.warn{background:#fef3c7;color:#d97706}
+.chip.est{background:#e0f2fe;color:#0284c7}
+.chip.none{background:#f4f4f5;color:#a1a1aa}
+.result-foot{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;flex:none}
+.result-foot .spacer{flex:1}
+.footnote{margin-top:18px;padding-top:14px;border-top:1px dashed #ececec;font-size:12px;color:#a1a1aa;line-height:1.9;flex:none}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:320px;background:#fff;border-left:1px solid #ececec;padding:22px 24px;z-index:30;display:flex;flex-direction:column;gap:16px;box-shadow:-10px 0 40px rgba(24,24,27,.08)}
+.drawer-head{display:flex;align-items:center;justify-content:space-between;font-size:15px;font-weight:600;margin-bottom:4px}
+.field{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#52525b}
+.drawer-note{font-size:12px;color:#a1a1aa;line-height:1.8}
+.mask{position:fixed;inset:0;background:rgba(24,24,27,.25);z-index:20}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:#18181b;color:#fff;font-size:13px;padding:10px 20px;border-radius:999px;z-index:40;box-shadow:0 8px 30px rgba(0,0,0,.2);animation:fade .3s ease}
+@keyframes fade{from{opacity:0;transform:translate(-50%,8px)}to{opacity:1;transform:translate(-50%,0)}}
+</style>
+</head>
+<body data-status="idle">
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo" title="作者印章"><img class="logo-img" src="/img/flycat.png" alt="作者印章"></div>
+      <div><div class="title">歌词时间戳</div><div class="subtitle">MP3 + 歌词 → LRC</div></div>
+    </div>
+    <div class="topright">
+      <span class="status"><span class="dot"></span><span id="status-text">就绪</span></span>
+      <button type="button" class="iconbtn" id="btn-settings" title="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg></button>
+    </div>
+  </header>
+
+  <main class="main">
+    <div class="meta-row">
+      <input class="input" id="meta-title" placeholder="歌名（可选）">
+      <input class="input" id="meta-artist" placeholder="歌手（可选）">
+    </div>
+    <section id="step-input">
+      <div class="drop" id="drop" title="选择音频文件">
+        <div class="drop-icon">♪</div>
+        <div class="drop-title" id="drop-title">拖入音频文件，或点击选择</div>
+        <div class="drop-hint" id="drop-hint">支持 mp3 / wav / m4a / flac / ogg / aac</div>
+      </div>
+      <input type="file" id="file" accept=".mp3,.wav,.m4a,.flac,.ogg,.aac,audio/*" hidden>
+      <div class="player-wrap" id="player-wrap" hidden><audio id="player" controls preload="metadata"></audio></div>
+      <textarea class="textarea" id="lyrics" placeholder="粘贴歌词，每行一句，例如：&#10;曾梦想仗剑走天涯&#10;看一看世界的繁华&#10;年少的心总有些轻狂"></textarea>
+      <div class="align-row">
+        <button type="button" class="btn btn-primary" id="btn-align" disabled>生成时间戳</button>
+        <span class="hint" id="btn-hint">请先选择音频文件，再粘贴歌词</span>
+      </div>
+    </section>
+
+    <section id="step-result" hidden>
+      <div class="player-wrap"><audio id="player2" controls preload="metadata"></audio></div>
+      <div class="playbar">
+        <button type="button" class="btn btn-ghost pbtn" id="btn-back5" title="后退 5 秒">⏪ 5秒</button>
+        <button type="button" class="btn btn-primary pbtn" id="btn-toggle" title="播放 / 暂停">▶ 播放</button>
+        <button type="button" class="btn btn-ghost pbtn" id="btn-fwd5" title="前进 5 秒">5秒 ⏩</button>
+      </div>
+      <div class="result-head">
+        <span class="progress" id="progress"></span>
+        <span class="result-hint">播放时当前句自动高亮 · 点击歌词行跳转试听 · 选中行后按空格或点「设为当前时间」重新打点</span>
+      </div>
+      <div class="lines-wrap">
+        <div class="lines" id="lines"></div>
+      </div>
+      <div class="result-foot">
+        <button type="button" class="btn btn-ghost" id="btn-export">导出 LRC</button>
+        <button type="button" class="btn btn-ghost" id="btn-copy">复制</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn btn-primary" id="btn-set-time">设为当前时间</button>
+        <button type="button" class="btn btn-ghost" id="btn-again">重新生成</button>
+      </div>
+      <p class="footnote">时间可直接在输入框中修改（mm:ss.xx）。未匹配的行会保留在 LRC 末尾且不带时间戳，可回到输入区增删歌词后重新生成。</p>
+    </section>
+  </main>
+</div>
+
+<div class="mask" id="mask" hidden></div>
+<div class="drawer" id="drawer" hidden>
+  <div class="drawer-head"><span>设置</span><button type="button" class="iconbtn" id="btn-close-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg></button></div>
+  <label class="field"><span>识别引擎</span><select id="sel-provider" class="input">
+    <option value="local">本地 faster-whisper（离线）</option>
+    <option value="dashscope">千问 · 百炼实时识别（在线）</option>
+  </select></label>
+<label class="field"><span>识别模型</span><select id="sel-model" class="input">
+    <option value="small">small · 快</option>
+    <option value="base">base · 更快</option>
+    <option value="medium">medium · 准（推荐）</option>
+  </select></label>
+  <label class="field"><span>识别语言</span><select id="sel-lang" class="input">
+    <option value="zh">中文</option>
+    <option value="en">英文</option>
+    <option value="">自动检测</option>
+  </select></label>
+  <label class="field"><span>百炼 API Key</span><input id="inp-api-key" class="input" type="password" placeholder="sk-..." autocomplete="off"></label>
+  <label class="field"><span>歌词热词增强（在线）</span><input id="chk-hotwords" type="checkbox" checked></label>
+<p class="drawer-note">本地模型首次使用时自动下载；千问在线识别需要 API Key，Key 只保存在本机 config.local.json，不会上传。修改设置后对下一次「生成」生效。</p>
+  <button type="button" class="btn btn-primary" id="btn-save-config">保存设置</button>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  var file = null, audioUrl = null, lines = [], selected = -1, playingIdx = -1;
+
+  function toast(msg){
+    var t = $('toast');
+    t.textContent = msg; t.hidden = false;
+    clearTimeout(t._timer);
+    t._timer = setTimeout(function(){ t.hidden = true; }, 2600);
+  }
+  function setStatus(text, state){
+    $('status-text').textContent = text;
+    document.body.dataset.status = state || 'idle';
+  }
+  function fmtT(t){
+    if (t == null || isNaN(t)) return '';
+    t = Math.max(0, t);
+    var m = Math.floor(t / 60), s = t - m * 60;
+    return String(m).padStart(2,'0') + ':' + s.toFixed(2).padStart(5,'0');
+  }
+  function parseT(str){
+    var s = (str || '').trim();
+    if (!s) return null;
+    var m = /^(\d+):(\d{1,2}(?:\.\d+)?)$/.exec(s);
+    if (m) return +m[1] * 60 + parseFloat(m[2]);
+    m = /^(\d{1,2}(?:\.\d+)?)$/.exec(s);
+    if (m) return parseFloat(m[1]);
+    return null;
+  }
+
+  // ---------- 输入区 ----------
+  var drop = $('drop'), fileInput = $('file');
+  drop.addEventListener('click', function(){ fileInput.click(); });
+  drop.addEventListener('dragover', function(e){ e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', function(){ drop.classList.remove('over'); });
+  drop.addEventListener('drop', function(e){
+    e.preventDefault(); drop.classList.remove('over');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', function(){ if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+  function setFile(f){
+    file = f;
+    if (audioUrl) URL.revokeObjectURL(audioUrl);
+    audioUrl = URL.createObjectURL(f);
+    $('player').src = audioUrl;
+    $('player-wrap').hidden = false;
+    $('drop-title').textContent = f.name;
+    $('drop-hint').textContent = (f.size / 1048576).toFixed(1) + ' MB';
+    updateAlignBtn();
+  }
+  function updateAlignBtn(){
+    var ok = !!(file && $('lyrics').value.trim());
+    $('btn-align').disabled = !ok;
+    var hint = $('btn-hint');
+    if (ok) hint.textContent = '可以生成了（首次识别约需几分钟，请耐心等待）';
+    else if (!file) hint.textContent = '还缺：音频文件（拖入或点击上方区域选择）';
+    else hint.textContent = '还缺：歌词（每行一句）';
+  }
+  $('lyrics').addEventListener('input', updateAlignBtn);
+  $('meta-title').addEventListener('input', updateAlignBtn);
+  $('meta-artist').addEventListener('input', updateAlignBtn);
+
+  // ---------- 生成 ----------
+  $('btn-align').addEventListener('click', function(){
+    var fd = new FormData();
+    fd.append('file', file);
+    fd.append('lyrics', $('lyrics').value);
+    fd.append('title', $('meta-title').value);
+    fd.append('artist', $('meta-artist').value);
+    fd.append('album', '');
+    setStatus('识别中…', 'busy');
+    $('btn-align').disabled = true;
+    $('btn-align').textContent = '识别中…';
+    $('btn-hint').textContent = '正在分析音频并匹配歌词，约需 4-6 分钟，请勿关闭页面';
+    fetch('/api/align', { method: 'POST', body: fd })
+      .then(function(res){ return res.json().then(function(d){ return res.ok ? d : Promise.reject(new Error(d.error || '生成失败')); }); })
+      .then(function(data){
+        lines = data.lines;
+        if (audioUrl) URL.revokeObjectURL(audioUrl);
+        audioUrl = URL.createObjectURL(file);
+        $('player2').src = audioUrl;
+        renderLines();
+        var n = lines.filter(function(l){ return l.start != null; }).length;
+        $('progress').textContent = '已匹配 ' + n + ' / ' + lines.length + ' 行' + (data.duration ? ' · 音频 ' + fmtT(data.duration) : '');
+        $('step-input').hidden = true;
+        $('step-result').hidden = false;
+        setStatus('完成', 'ok');
+      })
+      .catch(function(e){ setStatus('失败', 'err'); toast(e.message); })
+      .finally(function(){ $('btn-align').textContent = '生成时间戳'; updateAlignBtn(); });
+  });
+
+  // ---------- 结果区 ----------
+  function renderLines(){
+    var box = $('lines');
+    box.innerHTML = '';
+    selected = -1;
+    playingIdx = -1;
+    lines.forEach(function(ln, i){
+      var row = document.createElement('div');
+      row.className = 'line' + (ln.start == null ? ' none' : '') + (ln.matched ? '' : ' warn');
+      row.dataset.idx = i;
+
+      var inp = document.createElement('input');
+      inp.className = 'time';
+      inp.value = fmtT(ln.start);
+      inp.spellcheck = false;
+      inp.title = '直接输入时间，如 00:12.34 或 12.5';
+      inp.addEventListener('click', function(e){ e.stopPropagation(); });
+      inp.addEventListener('input', function(){
+        var t = parseT(inp.value);
+        if (t != null) lines[i].start = t;
+      });
+
+      var txt = document.createElement('span');
+      txt.className = 'text';
+      txt.textContent = ln.text;
+
+      var chip = document.createElement('span');
+      var label, cls;
+      if (ln.start == null) { label = '未匹配'; cls = 'none'; }
+      else if (ln.source === 'interp') { label = '估算'; cls = 'est'; }
+      else if (ln.matched) { label = '已匹配'; cls = 'ok'; }
+      else { label = '低置信'; cls = 'warn'; }
+      chip.className = 'chip ' + cls;
+      chip.textContent = label;
+
+      row.appendChild(inp); row.appendChild(txt); row.appendChild(chip);
+      row.addEventListener('click', function(){
+        selected = i; selectRow();
+        if (ln.start != null) seek(ln.start);
+      });
+      box.appendChild(row);
+    });
+  }
+  function selectRow(){
+    var rows = $('lines').children;
+    for (var i = 0; i < rows.length; i++) rows[i].classList.toggle('sel', i === selected);
+  }
+  function seek(t){
+    var p = $('player2');
+    if (p.src && t != null){ p.currentTime = t; p.play().catch(function(){}); }
+  }
+  function currentLineIndex(t){
+    var idx = -1;
+    for (var i = 0; i < lines.length; i++) {
+      var s = lines[i].start;
+      if (s == null) continue;
+      if (s <= t) idx = i; else break;
+    }
+    return idx;
+  }
+  function highlightPlaying(idx){
+    var rows = $('lines').children;
+    for (var i = 0; i < rows.length; i++) rows[i].classList.toggle('playing', i === idx);
+    if (idx >= 0 && rows[idx] && rows[idx].scrollIntoView) rows[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  $('player2').addEventListener('timeupdate', function(){
+    var p = $('player2');
+    if (!p.src) return;
+    var idx = currentLineIndex(p.currentTime);
+    if (idx !== playingIdx){ playingIdx = idx; highlightPlaying(idx); }
+  });
+  $('player2').addEventListener('ended', function(){
+    playingIdx = -1;
+    highlightPlaying(-1);
+    syncToggle();
+  });
+
+  // ---------- 播放控制 ----------
+  function syncToggle(){
+    $('btn-toggle').textContent = $('player2').paused ? '▶ 播放' : '⏸ 暂停';
+  }
+  function seekBy(delta){
+    var p = $('player2');
+    if (!p.src) return;
+    var dur = isFinite(p.duration) ? p.duration : Infinity;
+    p.currentTime = Math.max(0, Math.min(dur, (p.currentTime || 0) + delta));
+  }
+  $('btn-back5').addEventListener('click', function(){ seekBy(-5); });
+  $('btn-fwd5').addEventListener('click', function(){ seekBy(5); });
+  $('btn-toggle').addEventListener('click', function(){
+    var p = $('player2');
+    if (!p.src) return;
+    if (p.paused) p.play().catch(function(){}); else p.pause();
+  });
+  $('player2').addEventListener('play', syncToggle);
+  $('player2').addEventListener('pause', syncToggle);
+
+  function setTime(){
+    if (selected < 0 || !lines[selected]) return;
+    var p = $('player2');
+    if (!p.src) return;
+    var t = p.currentTime;
+    lines[selected].start = Math.round(t * 100) / 100;
+    lines[selected].matched = true;
+    var row = $('lines').children[selected];
+    row.classList.remove('none', 'warn');
+    row.querySelector('.time').value = fmtT(lines[selected].start);
+    var chip = row.querySelector('.chip');
+    chip.className = 'chip ok';
+    chip.textContent = '已匹配';
+  }
+  $('btn-set-time').addEventListener('click', setTime);
+  document.addEventListener('keydown', function(e){
+    if (e.code !== 'Space') return;
+    var tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'button' || tag === 'select' || tag === 'audio') return;
+    if (selected >= 0 && lines[selected]){ e.preventDefault(); setTime(); }
+  });
+
+  // ---------- 导出 ----------
+  function buildLrc(){
+    var out = [];
+    var title = $('meta-title').value.trim(), artist = $('meta-artist').value.trim();
+    if (title) out.push('[ti:' + title + ']');
+    if (artist) out.push('[ar:' + artist + ']');
+    lines.forEach(function(ln){
+      if (!ln.text || !ln.text.trim()) return;
+      out.push(ln.start == null ? ln.text : '[' + fmtT(ln.start) + ']' + ln.text);
+    });
+    return out.join('\n') + '\n';
+  }
+  $('btn-export').addEventListener('click', function(){
+    var text = buildLrc();
+    var base = $('meta-title').value.trim() || (file ? file.name.replace(/\.[^.]+$/, '') : '歌词');
+    var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = base + '.lrc';
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+    toast('已导出 ' + base + '.lrc');
+  });
+  $('btn-copy').addEventListener('click', function(){
+    navigator.clipboard.writeText(buildLrc()).then(function(){ toast('已复制到剪贴板'); }, function(){ toast('复制失败，请手动复制'); });
+  });
+  $('btn-again').addEventListener('click', function(){
+    $('step-result').hidden = true;
+    $('step-input').hidden = false;
+    setStatus('就绪', 'idle');
+  });
+
+  // ---------- 设置 ----------
+  function openSettings(){
+    fetch('/api/config').then(function(r){ return r.json(); }).then(function(cfg){
+      $('sel-provider').value = cfg.provider || 'local';
+      $('sel-model').value = cfg.model_size || 'medium';
+      $('sel-lang').value = cfg.language == null ? '' : cfg.language;
+      $('inp-api-key').value = cfg.api_key || '';
+      $('chk-hotwords').checked = cfg.hotword_boost !== false;
+      $('mask').hidden = false; $('drawer').hidden = false;
+    }).catch(function(){ toast('设置读取失败'); });
+  }
+  $('btn-settings').addEventListener('click', openSettings);
+  function closeSettings(){ $('mask').hidden = true; $('drawer').hidden = true; }
+  $('btn-close-settings').addEventListener('click', closeSettings);
+  $('mask').addEventListener('click', closeSettings);
+  $('btn-save-config').addEventListener('click', function(){
+    var body = { provider: $('sel-provider').value, model_size: $('sel-model').value, language: $('sel-lang').value, api_key: $('inp-api-key').value.trim(), hotword_boost: $('chk-hotwords').checked };
+    fetch('/api/config', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if (d.ok){ closeSettings(); toast('设置已保存'); } else throw new Error(d.error); })
+      .catch(function(e){ toast(e.message || '保存失败'); });
+  });
+})();
+</script>
+</body>
+</html>
