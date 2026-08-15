@@ -30,6 +30,8 @@ python -m venv .venv
 .venv\Scripts\python server.py
 ```
 
+也可以直接双击项目根目录的 `start.bat`：首次运行会自动创建虚拟环境并安装依赖，之后每次双击即可启动。
+
 首次使用本地识别会自动下载模型（数百 MB，之后离线可用）；使用在线识别需在「设置」中填写百炼 API Key。
 
 ## 使用说明
@@ -83,7 +85,7 @@ python -m venv .venv
 .venv\Scripts\python -m PyInstaller lrc-maker.spec --noconfirm --clean
 ```
 
-产物在 `dist\LrcMaker\`，可整体拷贝到任意 64 位 Windows 电脑，双击「启动歌词时间戳.bat」即用，无需安装 Python。
+产物在 `dist\LrcMaker\`，可整体拷贝到任意 64 位 Windows 电脑，双击「start.bat」即用，无需安装 Python。
 
 ## 原理
 
